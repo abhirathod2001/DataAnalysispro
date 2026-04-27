@@ -1,6 +1,5 @@
-'use client'
-import DataAnalysisPro from '../components/DataAnalysisPro'
+import DataAnalysisPro from '../components/DataAnalysisPro';
 
 export default function Home() {
-  return <DataAnalysisPro />
+  return <DataAnalysisPro />;
 }
