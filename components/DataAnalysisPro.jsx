@@ -18,16 +18,38 @@ export default function DataAnalysisPro() {
   const [clickCount, setClickCount] = useState(0);
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6 text-slate-950">
-      <section className="mx-auto max-w-6xl space-y-6">
-        <header className="rounded-3xl bg-white p-6 shadow-sm">
-          <p className="text-sm font-bold uppercase tracking-widest text-indigo-600">DataAnalysis Pro</p>
-          <h1 className="mt-2 text-4xl font-black">Interactive Data Analysis Learning Dashboard</h1>
-          <p className="mt-3 text-slate-600">Every control below uses React state. If the red button count increases, production JavaScript is working.</p>
-          <button type="button" onClick={() => setClickCount((count) => count + 1)} className="mt-5 rounded-xl bg-red-600 px-5 py-3 font-bold text-white">Test React Click: {clickCount}</button>
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-indigo-50 to-slate-100 p-6 text-slate-950">
+      <section className="mx-auto max-w-7xl space-y-6">
+        <nav className="flex flex-col gap-4 rounded-3xl border border-white bg-white/85 p-5 shadow-sm backdrop-blur md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-widest text-indigo-600">DataAnalysis Pro</p>
+            <h1 className="mt-1 text-2xl font-black">Theory, quizzes, videos, and projects</h1>
+          </div>
+          <a href="#topics" className="rounded-2xl bg-slate-950 px-5 py-3 text-center text-sm font-bold text-white hover:bg-slate-800">Start learning</a>
+        </nav>
+
+        <header className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+          <div className="rounded-3xl bg-white/80 p-8 shadow-sm backdrop-blur">
+            <div className="inline-flex rounded-full bg-indigo-100 px-4 py-2 text-sm font-bold text-indigo-700">Beginner to advanced roadmap</div>
+            <h2 className="mt-5 max-w-3xl text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">Master data analysis with a structured learning dashboard.</h2>
+            <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">Learn statistics, SQL, Python, visualization, ethics, and agentic AI through theory notes, video links, quiz practice, and project prompts.</p>
+            <button type="button" onClick={() => setClickCount((count) => count + 1)} className="mt-6 rounded-xl bg-red-600 px-5 py-3 font-bold text-white">Test React Click: {clickCount}</button>
+          </div>
+
+          <div className="rounded-3xl bg-white/85 p-6 shadow-xl backdrop-blur">
+            <p className="text-sm text-slate-500">Learning dashboard</p>
+            <h3 className="mt-1 text-3xl font-black">49% overall progress</h3>
+            <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-200"><div className="h-full w-[49%] rounded-full bg-slate-950" /></div>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-slate-100 p-4 text-center"><div className="text-3xl font-black">100</div><div className="text-sm text-slate-500">MCQs</div></div>
+              <div className="rounded-2xl bg-slate-100 p-4 text-center"><div className="text-3xl font-black">6</div><div className="text-sm text-slate-500">Topics</div></div>
+              <div className="rounded-2xl bg-slate-100 p-4 text-center"><div className="text-3xl font-black">3</div><div className="text-sm text-slate-500">Video links</div></div>
+              <div className="rounded-2xl bg-slate-100 p-4 text-center"><div className="text-3xl font-black">AI</div><div className="text-sm text-slate-500">Tutor-ready</div></div>
+            </div>
+          </div>
         </header>
 
-        <section className="grid gap-6 lg:grid-cols-2">
+        <section id="topics" className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-3xl bg-white p-6 shadow-sm">
             <h2 className="text-2xl font-black">Clickable Topic Cards</h2>
             <p className="mt-2 text-sm text-slate-500">Selected topic: <strong>{selectedTopic}</strong></p>
