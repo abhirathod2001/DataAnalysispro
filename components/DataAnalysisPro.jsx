@@ -3,35 +3,35 @@
 import { useMemo, useState } from 'react';
 
 const topics = [
-  { title: 'Statistics & Probability', level: 'All Levels', minutes: 20, progress: 70, skills: ['Hypothesis testing', 'Bayes', 'Distributions'], description: 'Convert raw numbers into evidence with probability, confidence intervals, and experiment design.' },
-  { title: 'SQL & Databases', level: 'Intermediate', minutes: 20, progress: 55, skills: ['Joins', 'CTEs', 'Window functions'], description: 'Query, join, group, and model structured business data for reporting and analysis.' },
-  { title: 'Python for Data Analysis', level: 'Beginner', minutes: 20, progress: 42, skills: ['Pandas', 'NumPy', 'EDA'], description: 'Clean data, automate workflows, and prepare repeatable analysis using Python.' },
-  { title: 'Power BI & Visualization', level: 'Intermediate', minutes: 18, progress: 64, skills: ['Dashboards', 'DAX', 'Storytelling'], description: 'Turn analysis into stakeholder-ready dashboards and business narratives.' },
-  { title: 'Data Ethics & Governance', level: 'Advanced', minutes: 15, progress: 28, skills: ['Privacy', 'Bias', 'Governance'], description: 'Handle data responsibly with privacy, fairness, documentation, and access controls.' },
-  { title: 'Agentic AI', level: 'Advanced', minutes: 18, progress: 35, skills: ['RAG', 'Agents', 'Evaluation'], description: 'Use LLMs, retrieval, and tools to automate reasoning-heavy analysis workflows.' },
+  { title: 'Statistics & Probability', level: 'All Levels', minutes: 20, progress: 70, skills: ['Hypothesis testing', 'Bayes', 'Distributions'], description: 'Convert raw numbers into evidence with probability, confidence intervals, and experiment design.', practice: 'Compare two conversion rates and decide whether a landing page change improved performance.' },
+  { title: 'SQL & Databases', level: 'Intermediate', minutes: 20, progress: 55, skills: ['Joins', 'CTEs', 'Window functions'], description: 'Query, join, group, and model structured business data for reporting and analysis.', practice: 'Write queries for monthly revenue, top customers, and repeat purchase behavior.' },
+  { title: 'Python for Data Analysis', level: 'Beginner', minutes: 20, progress: 42, skills: ['Pandas', 'NumPy', 'EDA'], description: 'Clean data, automate workflows, and prepare repeatable analysis using Python.', practice: 'Clean a messy CSV and summarize missing values, duplicates, and purchase trends.' },
+  { title: 'Power BI & Visualization', level: 'Intermediate', minutes: 18, progress: 64, skills: ['Dashboards', 'DAX', 'Storytelling'], description: 'Turn analysis into stakeholder-ready dashboards and business narratives.', practice: 'Build a sales dashboard with revenue, profit, region performance, and monthly growth.' },
+  { title: 'Data Ethics & Governance', level: 'Advanced', minutes: 15, progress: 28, skills: ['Privacy', 'Bias', 'Governance'], description: 'Handle data responsibly with privacy, fairness, documentation, and access controls.', practice: 'Review a customer dataset for privacy, bias, retention, and access-control risks.' },
+  { title: 'Agentic AI', level: 'Advanced', minutes: 18, progress: 35, skills: ['RAG', 'Agents', 'Evaluation'], description: 'Use LLMs, retrieval, and tools to automate reasoning-heavy analysis workflows.', practice: 'Design an AI assistant that answers questions from documents with citations.' },
 ];
 
 const syllabus = [
-  'Data analysis foundations',
-  'Statistics and probability',
-  'SQL querying and databases',
-  'Python, Pandas, and NumPy',
-  'Visualization and dashboarding',
-  'Business case studies',
-  'Ethics, governance, and AI workflows',
+  { title: 'Data analysis foundations', detail: 'Learn data types, metrics, business questions, cleaning strategy, and reporting basics.' },
+  { title: 'Statistics and probability', detail: 'Study descriptive statistics, uncertainty, hypothesis testing, confidence intervals, and Bayes concepts.' },
+  { title: 'SQL querying and databases', detail: 'Practice SELECT, WHERE, JOIN, GROUP BY, CTEs, subqueries, and window functions.' },
+  { title: 'Python, Pandas, and NumPy', detail: 'Use Python to clean CSV files, analyze DataFrames, and automate repetitive analysis.' },
+  { title: 'Visualization and dashboarding', detail: 'Choose charts, design dashboards, create KPI summaries, and communicate insights clearly.' },
+  { title: 'Business case studies', detail: 'Apply analysis to sales, marketing, finance, operations, and product scenarios.' },
+  { title: 'Ethics, governance, and AI workflows', detail: 'Understand privacy, bias, documentation, responsible AI, and AI-assisted workflows.' },
 ];
 
 const videos = [
-  'Statistics basics for data analysis',
-  'SQL full course for beginners',
-  'Python for data analysis beginner course',
-  'Power BI full course for beginners',
-  'Data ethics explained',
-  'AI agents tutorial for beginners',
+  { title: 'Statistics basics for data analysis', url: 'https://www.youtube.com/results?search_query=statistics+basics+for+data+analysis' },
+  { title: 'SQL full course for beginners', url: 'https://www.youtube.com/results?search_query=sql+full+course+for+beginners+data+analysis' },
+  { title: 'Python for data analysis beginner course', url: 'https://www.youtube.com/results?search_query=python+for+data+analysis+beginner+course' },
+  { title: 'Power BI full course for beginners', url: 'https://www.youtube.com/results?search_query=power+bi+full+course+for+beginners' },
+  { title: 'Data ethics explained', url: 'https://www.youtube.com/results?search_query=data+ethics+explained+for+beginners' },
+  { title: 'AI agents tutorial for beginners', url: 'https://www.youtube.com/results?search_query=ai+agents+tutorial+for+beginners' },
 ];
 
-function Card({ children, className = '' }) {
-  return <div className={`rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-sm backdrop-blur ${className}`}>{children}</div>;
+function Card({ children, className = '', id }) {
+  return <div id={id} className={`rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-sm backdrop-blur ${className}`}>{children}</div>;
 }
 
 export default function DataAnalysisPro() {
@@ -39,6 +39,8 @@ export default function DataAnalysisPro() {
   const [level, setLevel] = useState('All');
   const [dailyGoal, setDailyGoal] = useState(30);
   const [answer, setAnswer] = useState('');
+  const [selectedTopic, setSelectedTopic] = useState(topics[0]);
+  const [openSyllabus, setOpenSyllabus] = useState(0);
 
   const filteredTopics = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -52,6 +54,14 @@ export default function DataAnalysisPro() {
 
   const totalProgress = Math.round(topics.reduce((sum, topic) => sum + topic.progress, 0) / topics.length);
   const weeklyHours = Math.round((dailyGoal * 7) / 60);
+
+  function handleTopicClick(topic) {
+    setSelectedTopic(topic);
+    setAnswer('');
+    if (typeof window !== 'undefined') {
+      window.location.hash = 'selected-topic';
+    }
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-indigo-50 px-4 py-8 text-slate-950 sm:px-6 lg:px-10">
@@ -95,7 +105,7 @@ export default function DataAnalysisPro() {
             <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <h2 className="text-2xl font-black">Choose a topic</h2>
-                <p className="text-sm text-slate-500">Search by topic, skill, or level.</p>
+                <p className="text-sm text-slate-500">Click a topic card to load its practice task.</p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search SQL, Python, AI..." className="h-11 rounded-2xl border border-slate-300 px-4 text-sm outline-none focus:ring-4 focus:ring-indigo-200" />
@@ -105,25 +115,29 @@ export default function DataAnalysisPro() {
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
-              {filteredTopics.map((topic) => (
-                <article key={topic.title} className="rounded-3xl border border-slate-200 bg-white p-5 transition hover:-translate-y-1 hover:shadow-md">
-                  <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-lg font-black">{topic.title}</h3>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{topic.level}</span>
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{topic.description}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">{topic.skills.map((skill) => <span key={skill} className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">{skill}</span>)}</div>
-                  <div className="mt-4 text-sm text-slate-500">{topic.minutes} min • {topic.progress}% complete</div>
-                </article>
-              ))}
+              {filteredTopics.map((topic) => {
+                const isSelected = selectedTopic.title === topic.title;
+                return (
+                  <button key={topic.title} type="button" onClick={() => handleTopicClick(topic)} aria-pressed={isSelected} className={`rounded-3xl border bg-white p-5 text-left transition hover:-translate-y-1 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-indigo-200 ${isSelected ? 'border-indigo-600 ring-4 ring-indigo-100' : 'border-slate-200'}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-lg font-black">{topic.title}</h3>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{topic.level}</span>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{topic.description}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">{topic.skills.map((skill) => <span key={skill} className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">{skill}</span>)}</div>
+                    <div className="mt-4 text-sm text-slate-500">{topic.minutes} min • {topic.progress}% complete</div>
+                  </button>
+                );
+              })}
             </div>
           </Card>
 
           <div className="space-y-6">
-            <Card>
-              <h2 className="text-xl font-black">AI Tutor Panel</h2>
-              <p className="mt-3 text-sm leading-6 text-slate-600">Ask for hints, formula explanations, SQL corrections, Python debugging, or dashboard feedback. Backend API can be connected next.</p>
-              <div className="mt-4 rounded-2xl bg-slate-100 p-4 text-sm font-medium">Explain SQL joins with one business example.</div>
+            <Card id="selected-topic">
+              <h2 className="text-xl font-black">Selected topic</h2>
+              <p className="mt-2 text-lg font-bold text-indigo-700">{selectedTopic.title}</p>
+              <p className="mt-3 text-sm leading-6 text-slate-600">{selectedTopic.description}</p>
+              <div className="mt-4 rounded-2xl bg-indigo-50 p-4 text-sm font-semibold text-indigo-800">Practice: {selectedTopic.practice}</div>
             </Card>
             <Card>
               <h2 className="text-xl font-black">Study Planner</h2>
@@ -137,19 +151,35 @@ export default function DataAnalysisPro() {
         <section className="mt-6 grid gap-6 lg:grid-cols-3">
           <Card>
             <h2 className="text-xl font-black">Full syllabus</h2>
-            <div className="mt-4 space-y-3">{syllabus.map((item, index) => <div key={item} className="text-sm"><strong>{index + 1}.</strong> {item}</div>)}</div>
+            <div className="mt-4 space-y-3">
+              {syllabus.map((item, index) => {
+                const open = openSyllabus === index;
+                return (
+                  <button key={item.title} type="button" onClick={() => setOpenSyllabus(open ? -1 : index)} className="block w-full rounded-2xl border border-slate-200 bg-white p-4 text-left text-sm hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-indigo-200">
+                    <div className="font-bold"><strong>{index + 1}.</strong> {item.title}</div>
+                    {open && <p className="mt-2 leading-6 text-slate-600">{item.detail}</p>}
+                  </button>
+                );
+              })}
+            </div>
           </Card>
           <Card id="quiz">
             <h2 className="text-xl font-black">Quiz preview</h2>
             <p className="mt-4 text-sm font-semibold">Which SQL clause filters aggregated results?</p>
             {['WHERE', 'GROUP BY', 'HAVING', 'ORDER BY'].map((option) => (
-              <button key={option} onClick={() => setAnswer(option)} className={`mt-2 block w-full rounded-2xl border px-4 py-3 text-left text-sm ${answer === option ? option === 'HAVING' ? 'border-emerald-500 bg-emerald-50' : 'border-rose-500 bg-rose-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>{option}</button>
+              <button key={option} type="button" onClick={() => setAnswer(option)} className={`mt-2 block w-full rounded-2xl border px-4 py-3 text-left text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-indigo-200 ${answer === option ? option === 'HAVING' ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-rose-500 bg-rose-50 text-rose-800' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>{option}</button>
             ))}
-            {answer && <p className="mt-4 text-sm font-bold">{answer === 'HAVING' ? 'Correct. HAVING filters grouped results.' : 'Not quite. Aggregated filters belong in HAVING.'}</p>}
+            {answer && <p className="mt-4 rounded-2xl bg-slate-100 p-4 text-sm font-bold">{answer === 'HAVING' ? 'Correct. HAVING filters grouped results.' : 'Not quite. Aggregated filters belong in HAVING.'}</p>}
           </Card>
           <Card id="videos">
             <h2 className="text-xl font-black">Video library</h2>
-            <div className="mt-4 space-y-2">{videos.map((video) => <a key={video} href={`https://www.youtube.com/results?search_query=${encodeURIComponent(video)}`} target="_blank" rel="noreferrer" className="block rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold hover:underline">{video}</a>)}</div>
+            <div className="mt-4 space-y-2">
+              {videos.map((video) => (
+                <a key={video.title} href={video.url} target="_blank" rel="noopener noreferrer" className="block rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-900 hover:bg-slate-200 hover:underline focus:outline-none focus:ring-4 focus:ring-indigo-200">
+                  Open: {video.title}
+                </a>
+              ))}
+            </div>
           </Card>
         </section>
 
