@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+const STORAGE_KEY = 'dataanalysispro_progress_v1';
 
 const syllabus = [
   { title: 'Data Analysis Foundations', detail: 'Data analysis is the process of collecting, cleaning, transforming, and interpreting data to support better decisions. Start by defining a business question, identifying the right metrics, checking data quality, and summarizing patterns with tables, charts, and KPIs.', link: 'https://www.geeksforgeeks.org/data-analysis/data-analysis-tutorial/' },
@@ -50,59 +52,172 @@ const quizQuestions = Array.from({ length: 100 }, (_, index) => {
   return { id: index + 1, question: `Q${index + 1}. ${item.q}`, answer: item.a, options: item.o };
 });
 
+const defaultProgress = {
+  user: null,
+  selectedTopicTitle: topics[0].title,
+  completedTasks: [],
+  quizIndex: 0,
+  score: 0,
+  totalAnswered: 0,
+  completedTopics: [],
+};
+
 export default function DataAnalysisPro() {
+  const [hydrated, setHydrated] = useState(false);
+  const [loginName, setLoginName] = useState('');
+  const [progress, setProgress] = useState(defaultProgress);
   const [openSyllabus, setOpenSyllabus] = useState(0);
   const [selectedTopic, setSelectedTopic] = useState(topics[0]);
-  const [completedTasks, setCompletedTasks] = useState([]);
   const [quizStarted, setQuizStarted] = useState(false);
-  const [quizIndex, setQuizIndex] = useState(0);
   const [answer, setAnswer] = useState('');
-  const [score, setScore] = useState(0);
   const [aiInput, setAiInput] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
   const [aiMessages, setAiMessages] = useState([{ role: 'assistant', text: 'Ask me anything about data analysis, SQL, Excel, Python, statistics, dashboards, or Gen AI.' }]);
 
-  const currentQuestion = quizQuestions[quizIndex];
-  const completedCount = completedTasks.length;
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = { ...defaultProgress, ...JSON.parse(saved) };
+        setProgress(parsed);
+        const topic = topics.find((item) => item.title === parsed.selectedTopicTitle) || topics[0];
+        setSelectedTopic(topic);
+      }
+    } catch (error) {
+      setProgress(defaultProgress);
+    } finally {
+      setHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+  }, [hydrated, progress]);
+
+  const currentQuestion = quizQuestions[progress.quizIndex] || quizQuestions[0];
+  const completedCount = progress.completedTasks.length;
+  const progressPercent = Math.round(((completedCount + progress.completedTopics.length + Math.min(progress.totalAnswered, 100)) / (dailyTasks.length + topics.length + 100)) * 100);
+
+  function login(event) {
+    event.preventDefault();
+    const name = loginName.trim();
+    if (!name) return;
+    setProgress((current) => ({ ...current, user: { name, joinedAt: new Date().toISOString() } }));
+  }
+
+  function logout() {
+    setProgress(defaultProgress);
+    setSelectedTopic(topics[0]);
+    setQuizStarted(false);
+    setAnswer('');
+    localStorage.removeItem(STORAGE_KEY);
+  }
 
   function toggleTask(task) {
-    setCompletedTasks((current) => current.includes(task) ? current.filter((item) => item !== task) : [...current, task]);
+    setProgress((current) => {
+      const completedTasks = current.completedTasks.includes(task) ? current.completedTasks.filter((item) => item !== task) : [...current.completedTasks, task];
+      return { ...current, completedTasks };
+    });
+  }
+
+  function selectTopic(topic) {
+    setSelectedTopic(topic);
+    setProgress((current) => ({ ...current, selectedTopicTitle: topic.title }));
+  }
+
+  function markTopicComplete() {
+    setProgress((current) => {
+      const completedTopics = current.completedTopics.includes(selectedTopic.title) ? current.completedTopics : [...current.completedTopics, selectedTopic.title];
+      return { ...current, completedTopics };
+    });
   }
 
   function startQuiz() {
     setQuizStarted(true);
-    setQuizIndex(0);
     setAnswer('');
-    setScore(0);
   }
 
   function chooseAnswer(option) {
     if (answer) return;
     setAnswer(option);
-    if (option === currentQuestion.answer) setScore((value) => value + 1);
+    setProgress((current) => ({ ...current, score: current.score + (option === currentQuestion.answer ? 1 : 0), totalAnswered: current.totalAnswered + 1 }));
   }
 
   function nextQuestion() {
-    setQuizIndex((index) => (index + 1) % quizQuestions.length);
+    setProgress((current) => ({ ...current, quizIndex: (current.quizIndex + 1) % quizQuestions.length }));
     setAnswer('');
   }
 
-  function sendAiMessage() {
+  async function sendAiMessage() {
     const text = aiInput.trim();
     if (!text) return;
-    setAiMessages((messages) => [...messages, { role: 'user', text }, { role: 'assistant', text: `AI Assistant: For "${text}", start by identifying the dataset, business question, metric, method, and final action. For ${selectedTopic.title}, focus on: ${selectedTopic.theory}` }]);
+    const userMessage = { role: 'user', text };
+    setAiMessages((messages) => [...messages, userMessage]);
     setAiInput('');
+    setAiLoading(true);
+    try {
+      const response = await fetch('/api/assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, topic: selectedTopic.title }),
+      });
+      const data = await response.json();
+      setAiMessages((messages) => [...messages, { role: 'assistant', text: data.reply || 'No response received.' }]);
+    } catch (error) {
+      setAiMessages((messages) => [...messages, { role: 'assistant', text: `Fallback assistant: For "${text}", identify the dataset, business question, metric, method, result, and final action. Current topic: ${selectedTopic.title}.` }]);
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  if (!hydrated) {
+    return <main className="min-h-screen bg-slate-100 p-8 text-center text-slate-700">Loading Data Analysis Pro...</main>;
+  }
+
+  if (!progress.user) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-slate-100 px-4 text-slate-950">
+        <form onSubmit={login} className="w-full max-w-md rounded-2xl border bg-white p-8 shadow-sm">
+          <h1 className="text-4xl font-black">Data Analysis Pro</h1>
+          <p className="mt-3 text-slate-600">Login to track your quiz score, tasks, topics, and progress on this device.</p>
+          <label className="mt-6 block font-semibold">Your name</label>
+          <input value={loginName} onChange={(event) => setLoginName(event.target.value)} placeholder="Enter your name" className="mt-2 w-full rounded-lg border px-4 py-3 outline-none focus:border-blue-600" />
+          <button type="submit" className="mt-5 w-full rounded-lg bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">Start Learning</button>
+        </form>
+      </main>
+    );
   }
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-950">
       <section className="mx-auto max-w-7xl">
-        <header className="mb-8 text-center"><h1 className="text-5xl font-black tracking-tight">Data Analysis Pro</h1><p className="mt-4 text-xl text-slate-700">Your Comprehensive Study Platform for Data Analysis, Excel, SQL, Python & Gen AI</p></header>
-        <section className="grid gap-5 lg:grid-cols-[1.35fr_0.75fr]"><div className="space-y-5"><div className="grid gap-5 md:grid-cols-2"><div className="rounded-xl border bg-white p-5 shadow-sm"><h2 className="text-2xl font-bold">Syllabus</h2><button type="button" onClick={() => document.getElementById('syllabus-section')?.scrollIntoView({ behavior: 'smooth' })} className="mt-5 w-full rounded-lg bg-blue-600 px-5 py-4 text-lg font-bold text-white hover:bg-blue-700">View Full Syllabus</button><a href="https://www.geeksforgeeks.org/data-analysis/data-analysis-tutorial/" target="_blank" rel="noopener noreferrer" className="mt-4 block text-center text-sm text-slate-600 hover:text-blue-700">🔗 External theory resource</a></div><div className="rounded-xl border bg-white p-5 shadow-sm"><h2 className="text-2xl font-bold">MCQ Quiz</h2><h3 className="mt-2 text-2xl font-black">100 Questions Daily</h3><p className="text-slate-600">Test your knowledge with daily quizzes</p><button type="button" onClick={startQuiz} className="mt-5 rounded-lg bg-orange-500 px-8 py-4 text-lg font-bold text-white hover:bg-orange-600">Start Quiz</button></div></div>
-        {quizStarted && <div className="rounded-xl border bg-white p-5 shadow-sm"><div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between"><h2 className="text-2xl font-bold">Daily MCQ Quiz</h2><p className="font-semibold text-blue-700">Score: {score}/{quizIndex + (answer ? 1 : 0)} • Question {quizIndex + 1}/100</p></div><p className="mt-4 text-lg font-semibold">{currentQuestion.question}</p><div className="mt-4 grid gap-3 md:grid-cols-2">{currentQuestion.options.map((option) => { const selected = answer === option; const correct = option === currentQuestion.answer; return <button key={option} type="button" onClick={() => chooseAnswer(option)} disabled={Boolean(answer)} className={`rounded-lg border p-4 text-left font-semibold disabled:cursor-not-allowed ${selected ? correct ? 'border-green-500 bg-green-50 text-green-700' : 'border-red-500 bg-red-50 text-red-700' : 'bg-white hover:bg-blue-50'}`}>{option}</button>; })}</div>{answer && <div className="mt-4 flex items-center justify-between rounded-lg bg-slate-100 p-4"><p className="font-bold">{answer === currentQuestion.answer ? 'Correct answer.' : `Wrong. Correct: ${currentQuestion.answer}`}</p><button type="button" onClick={nextQuestion} className="rounded-lg bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-700">Next</button></div>}</div>}
-        <div className="rounded-xl border bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><h2 className="text-2xl font-bold">Everyday Tasks</h2><span className="text-sm font-semibold text-slate-500">{completedCount}/{dailyTasks.length} complete</span></div><div className="mt-4 space-y-3">{dailyTasks.map((task) => <div key={task} className="flex items-center justify-between gap-3"><button type="button" onClick={() => toggleTask(task)} className={`text-left text-lg ${completedTasks.includes(task) ? 'text-green-700 line-through' : ''}`}>✓ {task}</button><button type="button" onClick={() => toggleTask(task)} className="rounded border px-4 py-2 hover:bg-slate-100">{completedTasks.includes(task) ? 'Undo' : 'Mark Complete'}</button></div>)}</div></div>
-        <div className="rounded-xl border bg-white p-5 shadow-sm"><h2 className="text-2xl font-bold">Topics of Data Analysis</h2><div className="mt-4 grid gap-4 md:grid-cols-3">{topics.map((topic) => <button key={topic.title} type="button" onClick={() => setSelectedTopic(topic)} className={`rounded-lg border p-4 text-left hover:border-blue-500 hover:bg-blue-50 ${selectedTopic.title === topic.title ? 'border-blue-600 bg-blue-50' : 'bg-white'}`}><h3 className="font-bold">{topic.title}</h3><p className="mt-2 text-sm text-slate-600">{topic.category}</p><a href={topic.video} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()} className="mt-4 block font-semibold text-blue-600 hover:underline">Watch Video</a></button>)}</div></div>
-        <div className="rounded-xl border bg-white p-5 shadow-sm"><h2 className="text-2xl font-bold">Theory: {selectedTopic.title}</h2><p className="mt-3 leading-7 text-slate-700">{selectedTopic.theory}</p></div></div>
-        <aside className="space-y-5"><div className="rounded-xl border bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><h2 className="text-2xl font-bold">AI Assistant</h2><span className="text-2xl">🤖</span></div><div className="mt-4 h-64 overflow-y-auto rounded-lg border bg-slate-50 p-4">{aiMessages.map((msg, index) => <div key={index} className={`mb-3 rounded-lg p-3 ${msg.role === 'assistant' ? 'bg-white' : 'bg-blue-50 text-blue-900'}`}>{msg.text}</div>)}</div><div className="mt-3 flex gap-2"><input value={aiInput} onChange={(e) => setAiInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendAiMessage(); }} placeholder="Ask me anything about data analysis..." className="min-w-0 flex-1 rounded-lg border px-3 py-3 outline-none focus:border-purple-500" /><button type="button" onClick={sendAiMessage} className="rounded-lg bg-purple-600 px-5 py-3 font-bold text-white hover:bg-purple-700">Send</button></div></div><div className="rounded-xl border bg-white p-5 shadow-sm"><h2 className="text-2xl font-bold">Gen AI</h2><div className="mt-4 grid gap-3 sm:grid-cols-2">{genAiTopics.map((item) => <div key={item.title} className="rounded-lg border bg-white p-3"><h3 className="font-semibold">{item.title}</h3><a href={item.video} target="_blank" rel="noopener noreferrer" className="mt-3 block font-semibold text-blue-600 hover:underline">Watch Video</a></div>)}</div><a href="https://www.cloudskillsboost.google/paths/118" target="_blank" rel="noopener noreferrer" className="mt-5 inline-block rounded border px-5 py-2 font-semibold hover:bg-slate-100">Learn More</a></div></aside></section>
+        <header className="mb-8 text-center">
+          <div className="mb-4 flex flex-col items-center justify-between gap-3 rounded-xl border bg-white p-4 shadow-sm md:flex-row">
+            <div className="text-left"><p className="font-bold">Welcome, {progress.user.name}</p><p className="text-sm text-slate-500">Overall progress: {progressPercent}% • Quiz score: {progress.score}/{progress.totalAnswered}</p></div>
+            <button type="button" onClick={logout} className="rounded-lg border px-4 py-2 font-semibold hover:bg-slate-100">Reset / Logout</button>
+          </div>
+          <h1 className="text-5xl font-black tracking-tight">Data Analysis Pro</h1>
+          <p className="mt-4 text-xl text-slate-700">Your Comprehensive Study Platform for Data Analysis, Excel, SQL, Python & Gen AI</p>
+        </header>
+
+        <section className="grid gap-5 lg:grid-cols-[1.35fr_0.75fr]">
+          <div className="space-y-5">
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="rounded-xl border bg-white p-5 shadow-sm"><h2 className="text-2xl font-bold">Syllabus</h2><button type="button" onClick={() => document.getElementById('syllabus-section')?.scrollIntoView({ behavior: 'smooth' })} className="mt-5 w-full rounded-lg bg-blue-600 px-5 py-4 text-lg font-bold text-white hover:bg-blue-700">View Full Syllabus</button><a href="https://www.geeksforgeeks.org/data-analysis/data-analysis-tutorial/" target="_blank" rel="noopener noreferrer" className="mt-4 block text-center text-sm text-slate-600 hover:text-blue-700">🔗 External theory resource</a></div>
+              <div className="rounded-xl border bg-white p-5 shadow-sm"><h2 className="text-2xl font-bold">MCQ Quiz</h2><h3 className="mt-2 text-2xl font-black">100 Questions Daily</h3><p className="text-slate-600">Saved score: {progress.score}/{progress.totalAnswered}</p><button type="button" onClick={startQuiz} className="mt-5 rounded-lg bg-orange-500 px-8 py-4 text-lg font-bold text-white hover:bg-orange-600">Start Quiz</button></div>
+            </div>
+            {quizStarted && <div className="rounded-xl border bg-white p-5 shadow-sm"><div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between"><h2 className="text-2xl font-bold">Daily MCQ Quiz</h2><p className="font-semibold text-blue-700">Score: {progress.score}/{progress.totalAnswered} • Question {progress.quizIndex + 1}/100</p></div><p className="mt-4 text-lg font-semibold">{currentQuestion.question}</p><div className="mt-4 grid gap-3 md:grid-cols-2">{currentQuestion.options.map((option) => { const selected = answer === option; const correct = option === currentQuestion.answer; return <button key={option} type="button" onClick={() => chooseAnswer(option)} disabled={Boolean(answer)} className={`rounded-lg border p-4 text-left font-semibold disabled:cursor-not-allowed ${selected ? correct ? 'border-green-500 bg-green-50 text-green-700' : 'border-red-500 bg-red-50 text-red-700' : 'bg-white hover:bg-blue-50'}`}>{option}</button>; })}</div>{answer && <div className="mt-4 flex items-center justify-between rounded-lg bg-slate-100 p-4"><p className="font-bold">{answer === currentQuestion.answer ? 'Correct answer.' : `Wrong. Correct: ${currentQuestion.answer}`}</p><button type="button" onClick={nextQuestion} className="rounded-lg bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-700">Next</button></div>}</div>}
+            <div className="rounded-xl border bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><h2 className="text-2xl font-bold">Everyday Tasks</h2><span className="text-sm font-semibold text-slate-500">{completedCount}/{dailyTasks.length} complete</span></div><div className="mt-4 space-y-3">{dailyTasks.map((task) => <div key={task} className="flex items-center justify-between gap-3"><button type="button" onClick={() => toggleTask(task)} className={`text-left text-lg ${progress.completedTasks.includes(task) ? 'text-green-700 line-through' : ''}`}>✓ {task}</button><button type="button" onClick={() => toggleTask(task)} className="rounded border px-4 py-2 hover:bg-slate-100">{progress.completedTasks.includes(task) ? 'Undo' : 'Mark Complete'}</button></div>)}</div></div>
+            <div className="rounded-xl border bg-white p-5 shadow-sm"><h2 className="text-2xl font-bold">Topics of Data Analysis</h2><div className="mt-4 grid gap-4 md:grid-cols-3">{topics.map((topic) => <button key={topic.title} type="button" onClick={() => selectTopic(topic)} className={`rounded-lg border p-4 text-left hover:border-blue-500 hover:bg-blue-50 ${selectedTopic.title === topic.title ? 'border-blue-600 bg-blue-50' : 'bg-white'}`}><h3 className="font-bold">{topic.title}</h3><p className="mt-2 text-sm text-slate-600">{topic.category}</p><a href={topic.video} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()} className="mt-4 block font-semibold text-blue-600 hover:underline">Watch Video</a></button>)}</div></div>
+            <div className="rounded-xl border bg-white p-5 shadow-sm"><h2 className="text-2xl font-bold">Theory: {selectedTopic.title}</h2><p className="mt-3 leading-7 text-slate-700">{selectedTopic.theory}</p><button type="button" onClick={markTopicComplete} className="mt-4 rounded-lg bg-green-600 px-5 py-3 font-bold text-white hover:bg-green-700">Mark Topic Complete</button></div>
+          </div>
+
+          <aside className="space-y-5">
+            <div className="rounded-xl border bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><h2 className="text-2xl font-bold">AI Assistant</h2><span className="text-2xl">🤖</span></div><div className="mt-4 h-64 overflow-y-auto rounded-lg border bg-slate-50 p-4">{aiMessages.map((msg, index) => <div key={index} className={`mb-3 rounded-lg p-3 ${msg.role === 'assistant' ? 'bg-white' : 'bg-blue-50 text-blue-900'}`}>{msg.text}</div>)}{aiLoading && <div className="rounded-lg bg-white p-3">Thinking...</div>}</div><div className="mt-3 flex gap-2"><input value={aiInput} onChange={(e) => setAiInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendAiMessage(); }} placeholder="Ask me anything about data analysis..." className="min-w-0 flex-1 rounded-lg border px-3 py-3 outline-none focus:border-purple-500" /><button type="button" onClick={sendAiMessage} className="rounded-lg bg-purple-600 px-5 py-3 font-bold text-white hover:bg-purple-700">Send</button></div></div>
+            <div className="rounded-xl border bg-white p-5 shadow-sm"><h2 className="text-2xl font-bold">Gen AI</h2><div className="mt-4 grid gap-3 sm:grid-cols-2">{genAiTopics.map((item) => <div key={item.title} className="rounded-lg border bg-white p-3"><h3 className="font-semibold">{item.title}</h3><a href={item.video} target="_blank" rel="noopener noreferrer" className="mt-3 block font-semibold text-blue-600 hover:underline">Watch Video</a></div>)}</div><a href="https://www.cloudskillsboost.google/paths/118" target="_blank" rel="noopener noreferrer" className="mt-5 inline-block rounded border px-5 py-2 font-semibold hover:bg-slate-100">Learn More</a></div>
+          </aside>
+        </section>
         <section id="syllabus-section" className="mt-5 rounded-xl border bg-white p-5 shadow-sm"><h2 className="text-2xl font-bold">Clickable Full Syllabus</h2><div className="mt-4 grid gap-3 md:grid-cols-2">{syllabus.map((item, index) => { const open = openSyllabus === index; return <div key={item.title} className="rounded-lg border"><button type="button" onClick={() => setOpenSyllabus(open ? -1 : index)} className="flex w-full items-center justify-between p-4 text-left font-bold hover:bg-slate-50"><span>{index + 1}. {item.title}</span><span>{open ? '−' : '+'}</span></button>{open && <div className="border-t p-4 text-slate-700"><p>{item.detail}</p><a href={item.link} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block font-semibold text-blue-600 hover:underline">Open theory resource</a></div>}</div>; })}</div></section>
       </section>
     </main>
